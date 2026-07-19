@@ -1,8 +1,8 @@
 import argparse, os
-from posix import confstr_names
 
 from dotenv import load_dotenv
 from openai import OpenAI
+from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 
 load_dotenv()
 api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -13,7 +13,7 @@ client = OpenAI(
 )
 
 if api_key is None:
-    raise RuntimeError("API_KEY environment variable not found.")
+    raise RuntimeError("OPENROUTER_API_KEY environment variable not found.")
 
 
 def main():
@@ -21,23 +21,27 @@ def main():
         prog="practice_agent",
         description = "Reinforcing python while experimenting with basic chatbots")
     parser.add_argument("user_prompt", type = str, help = "Chatbot Prompt")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
+
+    messages:list[ChatCompletionMessageParam]=[
+        {"role": "user","content": args.user_prompt},
+    ]
 
     response = client.chat.completions.create(
         model = "openrouter/free",
-        messages=[
-            {
-                "role": "user",
-                "content": args.user_prompt,
-            }
-        ])
+        messages=messages,
+    )
     # Untested v
     if response.usage is None:
         raise RuntimeError("It looks like there may be a failed API request, no tokens were used.")
     # Untested ^
-    print(f"Prompt tokens: {response.usage.prompt_tokens}")
-    print(f"Response tokens: {response.usage.completion_tokens}")
-    print(f"Response: {response.choices[0].message.content}")
+    if args.verbose is True:
+        print(f"User prompt: {args.user_prompt}")
+        print(f"Prompt tokens: {response.usage.prompt_tokens}")
+        print(f"Response tokens: {response.usage.completion_tokens}")
+
+    print(f"Response: \n{response.choices[0].message.content}")
 
 if __name__ == "__main__":
     main()
