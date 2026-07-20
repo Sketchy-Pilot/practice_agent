@@ -11,6 +11,7 @@ class Calculator:
             "*": lambda a, b: a * b,
             "/": lambda a, b: a / b,
         }
+        # Correct operator precedence: multiplication/division have higher precedence than addition/subtraction
         self.precedence: dict[str, int] = {
             "+": 1,
             "-": 1,
@@ -30,6 +31,7 @@ class Calculator:
 
         for token in tokens:
             if token in self.operators:
+                # Apply operators with higher or equal precedence first
                 while (
                     operators
                     and operators[-1] in self.operators

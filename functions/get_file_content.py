@@ -1,5 +1,24 @@
 import os
 import config
+
+schema_get_file_content = {
+    "type": "function",
+    "function": {
+        "name": "get_file_content",
+        "description": "Reads a file in the specified file_path relative to the working directory. It will read the file up to a specified limit, then truncate with a message notifying that it was truncated",
+        "parameters":{
+            "type": "object",
+            "required": ["file_path"],
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "file path to read, relative to the working directory (default is the working directory itself)",
+                },
+            }
+        }
+    }
+}
+
 def get_file_content(working_directory: str, file_path: str) -> str:
     try:
         working_dir_abs = os.path.abspath(working_directory)

@@ -1,8 +1,15 @@
-import argparse, os
+import argparse
+from difflib import context_diff
+from operator import call
+import os
+import json
+from prompts import system_prompt
+from call_function import available_functions, call_function
 
 from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
+
 
 load_dotenv()
 api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -25,23 +32,42 @@ def main():
     args = parser.parse_args()
 
     messages:list[ChatCompletionMessageParam]=[
+        {"role": "system", "content": system_prompt},
         {"role": "user","content": args.user_prompt},
     ]
+    for _ in range(20):
+        response = client.chat.completions.create(
+            model = "openrouter/free",
+            messages=messages,
+            tools=available_functions,
+        )
 
-    response = client.chat.completions.create(
-        model = "openrouter/free",
-        messages=messages,
-    )
-    # Untested v
-    if response.usage is None:
-        raise RuntimeError("It looks like there may be a failed API request, no tokens were used.")
-    # Untested ^
-    if args.verbose is True:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {response.usage.prompt_tokens}")
-        print(f"Response tokens: {response.usage.completion_tokens}")
+        if response.usage is None:
+            raise RuntimeError("It looks like there may be a failed API request, no tokens were used.")
 
-    print(f"Response: \n{response.choices[0].message.content}")
+        if args.verbose is True:
+            print(f"User prompt: {args.user_prompt}")
+            print(f"Prompt tokens: {response.usage.prompt_tokens}")
+            print(f"Response tokens: {response.usage.completion_tokens}")
+
+
+
+        message = response.choices[0].message
+        messages.append(message)
+
+
+        if message.tool_calls:
+            for tool_call in message.tool_calls:
+                result_message = call_function(tool_call, verbose= args.verbose)
+                messages.append(result_message)
+                if not result_message["content"]:
+                    raise Exception("Content is empty")
+                if args.verbose:
+                    print(f"-> {result_message['content']}")
+
+        else:
+            print(message.content)
+            return
 
 if __name__ == "__main__":
     main()
